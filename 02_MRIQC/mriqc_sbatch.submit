@@ -1,0 +1,43 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --job-name mriqc # Job Name
+#SBATCH --output=LTS_mriqc.%A.out # Name of the output file
+#SBATCH --time=1-00:00:00  # 2 hours in this example, maximum time is 14 days
+#SBATCH --ntasks=3
+#SBATCH --mem=64G
+
+
+#----------------
+# Job Submission
+#----------------
+
+
+###How to use: Write the subjects you would like to run through participant level mriqc into the subjects variable separated by a space
+###            Change the path of the data_directory and output_directory to the correct location (they can be the same). MRIQC will error if
+###            the data directory is not a BIDS valid dataset so run bids validator if you are unsure.
+###            Change the path of the mriqc_img to where it is stored. You can create a new one by building the docker image as a singluarity image
+###            by running >>singularity build mriqc.simg docker://nipreps/mriqc:latest
+###            Comment out either the participant level line or the group level line to only run the level you are interested in. You must run the
+###            participant level on all subjects you are interested in reviewing metrics for before running group level. Group level will output csv
+###            files for T1w and functional quality metrics.
+###            Specify more time and memory than you think you need (likely about 4 hours per subject) and submit as job with >>sbatch mriqc_sbatch
+
+#subjects="1122 1129 1130 1131 1148 1156 1160 1161 1169 1178 1180 1181 1184 1185 1187 1190 1191 1192 1193 1194 1195 1196 1197 1198 1199 1203 1204 1205 1206 1208 1209 1210 1211 1213 1219 1220 1223 1225 1228 1229 1231 1240 1246 1247 1248 1250 1251 1252 1255 1257 1265 1268 1269 1276 1277 1278 1283 1284"
+subjects="${1}"
+#data_directory=/dors/booth/JBooth-Lab/BDL/ELP/bids_marisa4
+data_directory=/panfs/accrepfs.vampire/data/booth_lab/LTS_Data/BIDS_raw
+output_directory=/panfs/accrepfs.vampire/data/booth_lab/LTS_Data/preproc_fMRIprep
+mriqc_img=/panfs/accrepfs.vampire/data/booth_lab/LTS_Data/preproc_fMRIprep/scripts/mriqc/mriqc.simg
+
+echo ${subjects}
+
+### Uncomment the following to run at Participant Level
+
+ singularity exec -B ${data_directory} -B ${output_directory} ${mriqc_img} mriqc ${data_directory} ${output_directory}/derivatives_mriqc/mriqc participant --participant-label ${subjects} --no-sub
+
+
+### Uncomment the follwoing to run at Group Level
+
+# singularity exec -B ${data_directory} -B ${output_directory} ${mriqc_img} mriqc ${data_directory} ${output_directory}/derivatives_mriqc/mriqc group --no-sub
+
+
