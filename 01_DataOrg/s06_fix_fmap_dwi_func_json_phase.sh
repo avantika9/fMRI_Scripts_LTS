@@ -8,6 +8,7 @@
 #   metadata for fieldmap (fmap) and diffusion weighted imaging (dwi) directories.
 #   It performs three main operations:
 #   1. Corrects PhaseEncodingDirection in JSON metadata (j → j-)
+#   [All AP-direction files in both fmap and dwi folders (those that had PhaseEncodingDirection = "j" initially) will be updated to "j-"]
 #   2. Renames files containing "APP" to "AP" (Anterior-Posterior)
 #   3. Renames files containing "APA" to "PA" (Posterior-Anterior)
 # Configuration:
@@ -29,6 +30,9 @@
 #     - *.json (PhaseEncodingDirection field)
 #     - *APP*.json, *APP*.nii.gz, *APP*.bval, *APP*.bvec → *AP*.*
 #     - *APA*.json, *APA*.nii.gz, *APA*.bval, *APA*.bvec → *PA*.*
+#  
+#   FUNC folder:
+#     - *.json (PhaseEncodingDirection field: j → j-)
 #
 # Usage:
 #   ./fix_app_json_phase.sh
@@ -40,8 +44,8 @@
 
 # ===== CONFIGURATION =====
 BIDS_DIR="/panfs/accrepfs.vampire/data/booth_lab/LTS_Data/BIDS_raw"
-IDFILE="idfile_Alisha.txt"
-SESSION="ses-2"  # Change to "ses-2" as needed
+IDFILE="idfile.txt"
+SESSION="ses-1"  # Change to "ses-2" as needed
 # =========================do not edit below this line =========================
 
 for SUBJ_ID in $(cat "$IDFILE"); do
@@ -180,6 +184,28 @@ for SUBJ_ID in $(cat "$IDFILE"); do
         echo "  ✅ OK: $(basename "$JSON") (PhaseEncodingDirection=$PHASE)"
       fi
     done
+  ## === FUNC FOLDER ===
+  FUNC_DIR="$BIDS_DIR/$SUBJ_ID/$SESSION/func"
+
+  if [ ! -d "$FUNC_DIR" ]; then
+    echo "⚠️  Skipping func — folder not found."
+  else
+    echo "? Processing func folder..."
+    
+    # Fix PhaseEncodingDirection for all func JSONs
+    for JSON in "$FUNC_DIR"/*.json; do
+      [ -f "$JSON" ] || continue
+      PHASE=$(jq -r '.PhaseEncodingDirection // empty' "$JSON")
+      if [ "$PHASE" = "j" ]; then
+        echo "  ? Fixing $JSON (j → j-)"
+        jq '.PhaseEncodingDirection = "j-"' "$JSON" > "${JSON}.tmp" && mv "${JSON}.tmp" "$JSON"
+      else
+        echo "  ✅ OK: $(basename "$JSON") (PhaseEncodingDirection=$PHASE)"
+      fi
+    done
+  fi
+
+
   echo ""
 done
 
